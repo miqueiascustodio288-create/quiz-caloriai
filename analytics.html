@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard de Rastreamento & Funil do Quiz</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="analytics-config.js"></script>
+  <style>
+    .step-bar {
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 md:p-8 font-sans">
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Topo / Header -->
+    <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div>
+        <div class="flex flex-wrap items-center gap-2 mb-1.5">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Sistema de Rastreamento em Tempo Real
+          </div>
+          <span id="storage-status-badge" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-xs font-medium">
+            Conectando backend...
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
+          Funil de Conversão & Análise de Quedas do Quiz
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+          Monitore cada etapa do quiz e descubra exatamente onde os visitantes estão abandonando.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="/" target="_blank" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all border border-slate-700">
+          Abrir Quiz ↗
+        </a>
+        <button onclick="exportData('csv')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5 cursor-pointer" title="Baixar relatório em planilha CSV">
+          📥 Exportar CSV
+        </button>
+        <button onclick="exportData('json')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5 cursor-pointer" title="Baixar cópia de segurança em JSON">
+          💾 Backup JSON
+        </button>
+        <button id="btn-refresh" onclick="loadFunnelData()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Atualizar Dados
+        </button>
+      </div>
+    </header>
+
+    <!-- Card de Diagnóstico e Configuração do Netlify Drop / Upstash Redis -->
+    <div id="netlify-drop-config-box" class="hidden p-5 rounded-2xl bg-amber-950/30 border-2 border-amber-500/40 text-amber-200 text-xs space-y-3 shadow-lg">
+      <div class="flex items-start gap-3">
+        <span class="text-2xl">⚡</span>
+        <div class="flex-1 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-white text-sm">Modo Netlify Drop Detectado (Sem Funções Serverless)</h3>
+            <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px]">Netlify Drop</span>
+          </div>
+          <p class="text-slate-300 leading-relaxed">
+            O Netlify Drop publica sites puramente estáticos e <strong>não executa as funções serverless</strong> da pasta <code>netlify/functions/</code> (por isso a rota <code>/api/funnel</code> retornou 404).
+            <br>Para carregar os dados e persistir novos visitantes diretamente no seu <strong>Upstash Redis</strong>, insira suas credenciais abaixo:
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">UPSTASH_REDIS_REST_URL</label>
+              <input id="input-upstash-url" type="text" placeholder="https://sensible-bull-12345.upstash.io" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">UPSTASH_REDIS_REST_TOKEN</label>
+              <input id="input-upstash-token" type="password" placeholder="AX1234567890abcdef..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono" />
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 pt-1.5">
+            <button onclick="saveAndConnectUpstash()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-bold transition-all shadow cursor-pointer">
+              Salvar e Conectar ao Upstash
+            </button>
+            <span id="upstash-connect-status" class="text-xs font-semibold"></span>
+          </div>
+          <p class="text-[11px] text-slate-400 pt-1">
+            💡 <strong>Para os visitantes do quiz:</strong> Cole essas mesmas credenciais no arquivo <code>analytics-config.js</code> no seu projeto antes de subir para o Netlify Drop.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerta de Conexão com a API (em caso de indisponibilidade de deploy) -->
+    <div id="api-error-alert" class="hidden p-4 rounded-2xl bg-amber-950/40 border-2 border-amber-500/40 text-amber-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+      <div class="flex items-center gap-3">
+        <span class="text-xl">⚠️</span>
+        <div>
+          <strong class="font-bold block text-white">Não foi possível carregar métricas da API (/api/funnel)</strong>
+          <span id="api-error-text" class="text-slate-300">Verifique se o Netlify Functions e os redirects foram publicados.</span>
+        </div>
+      </div>
+      <button onclick="loadFunnelData()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-xl font-bold transition-all shrink-0">
+        Tentar Novamente
+      </button>
+    </div>
+
+    <!-- Alerta da Maior Queda (Se houver) -->
+    <div id="biggest-drop-alert" class="hidden p-4 sm:p-5 rounded-2xl bg-red-950/40 border-2 border-red-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+      <div class="flex items-start gap-3.5">
+        <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 border border-red-500/40 flex items-center justify-center shrink-0 font-black text-lg">
+          ⚠️
+        </div>
+        <div>
+          <span class="text-xs uppercase font-extrabold tracking-wider text-red-400">Ponto Crítico Identificado</span>
+          <h2 id="drop-alert-title" class="text-base sm:text-lg font-black text-white">
+            Maior Queda: Etapa X
+          </h2>
+          <p id="drop-alert-desc" class="text-xs text-slate-300 mt-0.5">
+            Carregando análise...
+          </p>
+        </div>
+      </div>
+      <div class="text-right sm:border-l sm:border-red-500/30 sm:pl-4 shrink-0">
+        <span class="text-[10px] text-slate-400 block uppercase font-bold">Taxa de Perda</span>
+        <span id="drop-alert-rate" class="text-2xl font-black text-red-400">0%</span>
+      </div>
+    </div>
+
+    <!-- Cards Principais de Indicadores -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-1">
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Iniciaram o Quiz</span>
+        <div id="stat-total-started" class="text-2xl sm:text-3xl font-black text-white tracking-tight">0</div>
+        <p class="text-[11px] text-slate-500">Visitantes únicos no Step 1</p>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-1">
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Concluíram (Final)</span>
+        <div id="stat-total-completed" class="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight">0</div>
+        <p class="text-[11px] text-slate-500">Chegaram à Etapa 24 (VSL/Oferta)</p>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-1">
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Taxa de Conclusão</span>
+        <div id="stat-completion-rate" class="text-2xl sm:text-3xl font-black text-amber-400 tracking-tight">0%</div>
+        <p class="text-[11px] text-slate-500">Iniciaram vs Concluíram</p>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-1">
+        <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Cliques no Checkout</span>
+        <div id="stat-checkout-clicks" class="text-2xl sm:text-3xl font-black text-cyan-400 tracking-tight">0</div>
+        <p class="text-[11px] text-slate-500">Cliques no botão de compra</p>
+      </div>
+    </div>
+
+    <!-- Gráfico Visual do Funil (24 Etapas) -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-lg font-black text-white">Visualização do Funil Passo a Passo</h2>
+          <p class="text-xs text-slate-400">Retenção de visitantes e abandono em cada uma das 24 etapas</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="inline-flex items-center gap-1 text-slate-400">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Normal
+          </span>
+          <span class="inline-flex items-center gap-1 text-slate-400">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Maior Queda
+          </span>
+        </div>
+      </div>
+
+      <div id="funnel-bars-container" class="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+        <div class="text-center py-8 text-slate-500 text-sm">Carregando dados do funil...</div>
+      </div>
+    </div>
+
+    <!-- Tabela Detalhada com Quedas e Abandonos -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4 overflow-hidden">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-lg font-black text-white">Tabela Analítica por Etapa</h2>
+          <p class="text-xs text-slate-400">Métricas completas de avanço, desistência e abandono exato</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider font-extrabold text-[11px]">
+              <th class="py-3 px-3">Etapa</th>
+              <th class="py-3 px-3">Nome / Descrição</th>
+              <th class="py-3 px-3 text-right">Chegaram</th>
+              <th class="py-3 px-3 text-right">Avançaram</th>
+              <th class="py-3 px-3 text-right text-red-400">Abandonaram Aqui</th>
+              <th class="py-3 px-3 text-right">Taxa de Queda</th>
+            </tr>
+          </thead>
+          <tbody id="funnel-table-body" class="divide-y divide-slate-800/60 font-medium">
+            <tr>
+              <td colspan="6" class="py-6 text-center text-slate-500">Nenhum dado registrado ainda.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Feed de Eventos Recentes -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h2 class="text-base font-black text-white">Últimos Eventos Recebidos (Stream)</h2>
+        <span id="events-count-badge" class="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[11px] font-bold">0 eventos</span>
+      </div>
+      <div id="events-stream-list" class="space-y-1.5 text-xs font-mono max-h-60 overflow-y-auto bg-slate-950 p-3 rounded-xl border border-slate-800 text-slate-300">
+        <div class="text-slate-500 py-3 text-center font-sans">Aguardando eventos...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const STEP_TITLES = {
+      1: 'Ten más control sobre tu alimentación y tus calorías',
+      2: '¿Cómo percibes tu cuerpo actualmente?',
+      3: 'Sensibilidades y factores alimentarios',
+      4: 'Mayor dificultad en la rutina alimentaria',
+      5: 'Objetivo principal con el control de calorías',
+      6: 'Prueba Social y Resultados',
+      7: 'Sensación y objetivo deseado',
+      8: 'Ritmo del metabolismo',
+      9: 'Dificultad para mantener la constancia',
+      10: 'Zona donde más te gustaría notar mejoras',
+      11: 'Cambios en el metabolismo con los años',
+      12: 'Análisis Simulado en Tiempo Real',
+      13: 'Resultado / Causa Raíz Identificada',
+      14: 'Otras funciones de la aplicación',
+      15: 'Qué te impedía hacer seguimiento antes',
+      16: 'Rutina de comidas en el día a día',
+      17: 'Práctica de actividad física',
+      18: 'Por qué el control visual funciona mejor',
+      19: 'Adequación de la Solución / 98% de Compatibilidad',
+      20: 'Deseo de practicidad visual',
+      21: 'Consecuencia de continuar sin seguimiento',
+      22: 'Compromiso de menos de 2 minutos al día',
+      23: 'Configuración Final del Perfil y Protocolo',
+      24: 'Presentación VSL y Oferta Calori AI'
+    };
+
+    let currentLoadedEvents = [];
+    window.lastBackendMode = 'serverless';
+
+    function getUpstashConfig() {
+      const cfg = (typeof window !== 'undefined' && window.CALORIAS_ANALYTICS_CONFIG) || {};
+      let url = (cfg.upstashUrl || cfg.UPSTASH_REDIS_REST_URL || '').trim();
+      let token = (cfg.upstashToken || cfg.UPSTASH_REDIS_REST_TOKEN || '').trim();
+      if (!url || !token) {
+        try {
+          url = url || (localStorage.getItem('calori_upstash_url') || '').trim();
+          token = token || (localStorage.getItem('calori_upstash_token') || '').trim();
+        } catch (e) {}
+      }
+      if (url && token) {
+        return { url: url.replace(/\/+$/, ''), token };
+      }
+      return null;
+    }
+
+    async function fetchDirectFromUpstash(cfg) {
+      const res = await fetch(`${cfg.url}/lrange/calori_analytics_events/0/-1`, {
+        headers: { Authorization: `Bearer ${cfg.token}` }
+      });
+      if (!res.ok) {
+        throw new Error(`Upstash retornou status ${res.status}`);
+      }
+      const data = await res.json();
+      if (Array.isArray(data.result)) {
+        return data.result.map(item => {
+          try {
+            return typeof item === 'string' ? JSON.parse(item) : item;
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean);
+      }
+      return [];
+    }
+
+    function isTestEvent(ev) {
+      if (!ev) return false;
+      if (ev.is_test === true || ev.test_mode === true) return true;
+      if (ev.session_id && (ev.session_id.startsWith('test_') || ev.session_id.startsWith('test-') || ev.session_id.includes('_test_'))) return true;
+      return false;
+    }
+
+    function computeClientFunnelReport(events, storageMeta = {}) {
+      const totalSteps = 24;
+      const sessionsMap = new Map();
+      const realEvents = events.filter(e => !isTestEvent(e));
+      const testEvents = events.filter(e => isTestEvent(e));
+
+      for (const ev of realEvents) {
+        if (!ev || !ev.session_id) continue;
+        const sid = ev.session_id;
+
+        if (!sessionsMap.has(sid)) {
+          sessionsMap.set(sid, {
+            session_id: sid,
+            device_type: ev.device_type || 'unknown',
+            started: false,
+            completed_steps: new Set(),
+            max_step_reached: 1,
+            is_completed: false,
+            checkout_clicked: false,
+            last_abandoned_step: null,
+            first_seen: ev.timestamp,
+            last_seen: ev.timestamp
+          });
+        }
+
+        const sess = sessionsMap.get(sid);
+        if (ev.device_type && (sess.device_type === 'unknown' || !sess.device_type)) {
+          sess.device_type = ev.device_type;
+        }
+        sess.last_seen = ev.timestamp;
+
+        if (ev.event_name === 'quiz_started') {
+          sess.started = true;
+          sess.max_step_reached = Math.max(sess.max_step_reached, ev.first_step || 1);
+        } else if (ev.event_name === 'quiz_step_completed') {
+          sess.started = true;
+          const sn = parseInt(ev.step_number, 10);
+          if (!isNaN(sn)) {
+            sess.completed_steps.add(sn);
+            sess.max_step_reached = Math.max(sess.max_step_reached, sn + 1);
+          }
+        } else if (ev.event_name === 'quiz_completed') {
+          sess.started = true;
+          sess.is_completed = true;
+          sess.max_step_reached = Math.max(sess.max_step_reached, totalSteps);
+        } else if (ev.event_name === 'quiz_abandoned') {
+          const ls = parseInt(ev.last_step, 10);
+          if (!isNaN(ls)) {
+            sess.last_abandoned_step = ls;
+            sess.max_step_reached = Math.max(sess.max_step_reached, ls);
+          }
+        } else if (ev.event_name === 'quiz_checkout_clicked' || ev.event_name === 'cta_click') {
+          sess.checkout_clicked = true;
+          sess.is_completed = true;
+        }
+      }
+
+      const allSessions = Array.from(sessionsMap.values());
+      const startedSessions = allSessions.filter(s => s.started || s.max_step_reached >= 1);
+      const totalStarted = startedSessions.length;
+
+      const steps = [];
+      for (let s = 1; s <= totalSteps; s++) {
+        const reached = startedSessions.filter(sess => {
+          if (s === 1) return true;
+          return sess.completed_steps.has(s - 1) || sess.max_step_reached >= s;
+        }).length;
+
+        const completed = startedSessions.filter(sess => sess.completed_steps.has(s)).length;
+
+        const abandoned = startedSessions.filter(sess => {
+          if (sess.is_completed) return false;
+          if (sess.last_abandoned_step === s) return true;
+          return sess.max_step_reached === s && !sess.completed_steps.has(s);
+        }).length;
+
+        steps.push({
+          step_number: s,
+          step_name: STEP_TITLES[s] || `Etapa ${s}`,
+          reached_count: reached,
+          completed_count: completed,
+          abandoned_count: abandoned
+        });
+      }
+
+      let biggestDropStep = null;
+      let maxDropCount = -1;
+
+      for (let i = 0; i < steps.length; i++) {
+        const cur = steps[i];
+        const next = steps[i + 1];
+        const nextReached = next ? next.reached_count : startedSessions.filter(s => s.is_completed).length;
+
+        const dropCount = Math.max(0, cur.reached_count - nextReached);
+        const dropRate = cur.reached_count > 0 ? ((dropCount / cur.reached_count) * 100).toFixed(1) : '0.0';
+        const advanceRate = cur.reached_count > 0 ? (((cur.reached_count - dropCount) / cur.reached_count) * 100).toFixed(1) : '0.0';
+
+        cur.drop_off_count = dropCount;
+        cur.drop_off_rate = dropRate + '%';
+        cur.advance_rate = advanceRate + '%';
+
+        if (i < steps.length - 1 && dropCount > maxDropCount && dropCount > 0) {
+          maxDropCount = dropCount;
+          biggestDropStep = {
+            step_number: cur.step_number,
+            step_name: cur.step_name,
+            drop_count: dropCount,
+            drop_rate: dropRate + '%'
+          };
+        }
+      }
+
+      const totalCompleted = startedSessions.filter(s => s.is_completed).length;
+      const totalCheckoutClicks = startedSessions.filter(s => s.checkout_clicked).length;
+      const overallRate = totalStarted > 0 ? ((totalCompleted / totalStarted) * 100).toFixed(1) + '%' : '0.0%';
+
+      const testSummary = {
+        total_test_events: testEvents.length,
+        total_test_sessions: new Set(testEvents.map(e => e.session_id)).size
+      };
+
+      return {
+        total_started: totalStarted,
+        total_completed: totalCompleted,
+        completion_rate: overallRate,
+        total_checkout_clicks: totalCheckoutClicks,
+        biggest_drop_step: biggestDropStep,
+        steps,
+        test_summary: testSummary,
+        storage_info: {
+          backend: storageMeta.backend || 'upstash_redis_direct',
+          backend_label: storageMeta.backend_label || 'Upstash Redis Direto (Modo Netlify Drop)',
+          persistent: true
+        }
+      };
+    }
+
+    async function saveAndConnectUpstash() {
+      const urlInput = document.getElementById('input-upstash-url');
+      const tokenInput = document.getElementById('input-upstash-token');
+      const statusSpan = document.getElementById('upstash-connect-status');
+
+      const url = (urlInput ? urlInput.value : '').trim().replace(/\/+$/, '');
+      const token = (tokenInput ? tokenInput.value : '').trim();
+
+      if (!url || !token) {
+        if (statusSpan) {
+          statusSpan.className = 'text-xs text-red-400 font-bold';
+          statusSpan.innerText = 'Preencha a URL e o Token do Upstash.';
+        }
+        return;
+      }
+
+      if (statusSpan) {
+        statusSpan.className = 'text-xs text-amber-300 font-semibold';
+        statusSpan.innerText = 'Testando conexão com o Upstash...';
+      }
+
+      try {
+        const testRes = await fetch(`${url}/lrange/calori_analytics_events/0/0`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!testRes.ok) {
+          throw new Error(`HTTP ${testRes.status} (Verifique se o token é válido)`);
+        }
+
+        localStorage.setItem('calori_upstash_url', url);
+        localStorage.setItem('calori_upstash_token', token);
+
+        if (statusSpan) {
+          statusSpan.className = 'text-xs text-emerald-400 font-bold';
+          statusSpan.innerText = '✅ Conectado com sucesso ao Upstash!';
+        }
+
+        setTimeout(() => {
+          const cfgBox = document.getElementById('netlify-drop-config-box');
+          if (cfgBox) cfgBox.classList.add('hidden');
+          loadFunnelData();
+        }, 800);
+      } catch (err) {
+        if (statusSpan) {
+          statusSpan.className = 'text-xs text-red-400 font-bold';
+          statusSpan.innerText = `❌ Falha ao conectar: ${err.message}`;
+        }
+      }
+    }
+
+    function exportData(format = 'csv') {
+      if (format === 'csv') {
+        if (window.lastBackendMode === 'serverless') {
+          window.location.href = '/api/analytics/export?format=csv';
+          return;
+        }
+
+        const events = currentLoadedEvents || [];
+        const headers = ['timestamp', 'event_name', 'session_id', 'step_number', 'step_name', 'last_step', 'device_type', 'is_test'];
+        const csvRows = [headers.join(',')];
+
+        for (const ev of events) {
+          const row = [
+            JSON.stringify(ev.timestamp || ''),
+            JSON.stringify(ev.event_name || ev.event || ''),
+            JSON.stringify(ev.session_id || ''),
+            JSON.stringify(ev.step_number || ''),
+            JSON.stringify(ev.step_name || ''),
+            JSON.stringify(ev.last_step || ''),
+            JSON.stringify(ev.device_type || ''),
+            JSON.stringify(isTestEvent(ev) ? 'true' : 'false')
+          ];
+          csvRows.push(row.join(','));
+        }
+
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `analytics_calorias_${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+      } else if (format === 'json') {
+        if (window.lastBackendMode === 'serverless') {
+          window.location.href = '/api/analytics/export?format=json';
+          return;
+        }
+        const blob = new Blob([JSON.stringify(currentLoadedEvents, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `analytics_calorias_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        link.click();
+      }
+    }
+
+    async function loadFunnelData() {
+      const errBox = document.getElementById('api-error-alert');
+      const dropBox = document.getElementById('netlify-drop-config-box');
+      const storageBadge = document.getElementById('storage-status-badge');
+      const btn = document.getElementById('btn-refresh');
+
+      try {
+        if (btn) btn.innerText = 'Carregando...';
+
+        // 1. Tenta API Serverless (/api/funnel)
+        let funnelRes = null;
+        let eventsRes = { events: [] };
+        let isServerlessOk = false;
+
+        try {
+          let r = await fetch('/api/funnel');
+          if (!r.ok && (r.status === 404 || r.status === 405)) {
+            r = await fetch('/.netlify/functions/funnel');
+          }
+          if (r.ok) {
+            funnelRes = await r.json();
+            isServerlessOk = true;
+          }
+        } catch (e) {}
+
+        if (isServerlessOk && funnelRes) {
+          window.lastBackendMode = 'serverless';
+          try {
+            let r2 = await fetch('/api/analytics');
+            if (r2.ok) eventsRes = await r2.json();
+          } catch (e) {}
+
+          if (errBox) errBox.classList.add('hidden');
+          if (dropBox) dropBox.classList.add('hidden');
+          currentLoadedEvents = eventsRes.events || [];
+          renderDashboard(funnelRes, currentLoadedEvents);
+          return;
+        }
+
+        // 2. Fallback: Conexão direta ao Upstash Redis (Modo Netlify Drop)
+        window.lastBackendMode = 'upstash_direct';
+        const upstashCfg = getUpstashConfig();
+
+        if (upstashCfg) {
+          try {
+            const events = await fetchDirectFromUpstash(upstashCfg);
+            currentLoadedEvents = events;
+            const report = computeClientFunnelReport(events, {
+              backend: 'upstash_redis_direct',
+              backend_label: 'Upstash Redis Direto (Modo Netlify Drop)'
+            });
+
+            if (errBox) errBox.classList.add('hidden');
+            if (dropBox) dropBox.classList.add('hidden');
+            renderDashboard(report, events);
+            return;
+          } catch (upstashErr) {
+            console.warn('Erro ao conectar diretamente ao Upstash Redis:', upstashErr);
+            if (dropBox) dropBox.classList.remove('hidden');
+            if (errBox) {
+              errBox.classList.remove('hidden');
+              document.getElementById('api-error-text').innerText = `Falha na conexão com Upstash Redis: ${upstashErr.message}. Verifique sua URL e Token.`;
+            }
+            if (storageBadge) {
+              storageBadge.className = 'px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/30 text-xs font-semibold';
+              storageBadge.innerText = '🔴 Erro de Autenticação Upstash';
+            }
+            return;
+          }
+        }
+
+        // 3. Nem serverless nem Upstash configurado -> Mostra painel de configuração do Netlify Drop
+        if (dropBox) {
+          dropBox.classList.remove('hidden');
+          const existingUrl = localStorage.getItem('calori_upstash_url') || '';
+          const existingToken = localStorage.getItem('calori_upstash_token') || '';
+          const urlInput = document.getElementById('input-upstash-url');
+          const tokenInput = document.getElementById('input-upstash-token');
+          if (urlInput && !urlInput.value && existingUrl) urlInput.value = existingUrl;
+          if (tokenInput && !tokenInput.value && existingToken) tokenInput.value = existingToken;
+        }
+        if (errBox) errBox.classList.add('hidden');
+        if (storageBadge) {
+          storageBadge.className = 'px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-semibold';
+          storageBadge.innerText = '🟡 Netlify Drop: Configure o Upstash';
+        }
+      } catch (err) {
+        console.error('Erro geral ao carregar dados:', err);
+        if (errBox) errBox.classList.remove('hidden');
+      } finally {
+        if (btn) btn.innerHTML = `<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Atualizar Dados`;
+      }
+    }
+
+    function renderDashboard(data, events) {
+      if (!data) return;
+
+      // Status do Armazenamento
+      const storageBadge = document.getElementById('storage-status-badge');
+      if (storageBadge && data.storage_info) {
+        const isPersist = data.storage_info.persistent;
+        const label = data.storage_info.backend_label || data.storage_info.backend || 'Ativo';
+        if (isPersist) {
+          storageBadge.className = 'px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold';
+          storageBadge.innerText = `🟢 ${label}`;
+        } else {
+          storageBadge.className = 'px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-semibold';
+          storageBadge.innerText = `🟡 ${label}`;
+        }
+      }
+
+      // KPIs
+      document.getElementById('stat-total-started').innerText = data.total_started || 0;
+      document.getElementById('stat-total-completed').innerText = data.total_completed || 0;
+      document.getElementById('stat-completion-rate').innerText = data.completion_rate || '0.0%';
+      document.getElementById('stat-checkout-clicks').innerText = data.total_checkout_clicks || 0;
+
+      // Alerta da Maior Queda
+      const alertBox = document.getElementById('biggest-drop-alert');
+      if (data.biggest_drop_step && data.biggest_drop_step.drop_count > 0) {
+        alertBox.classList.remove('hidden');
+        document.getElementById('drop-alert-title').innerText = `Maior Queda: Etapa ${data.biggest_drop_step.step_number} (${data.biggest_drop_step.step_name || ''})`;
+        document.getElementById('drop-alert-desc').innerText = `${data.biggest_drop_step.drop_count} pessoas abandonaram nesta etapa. Esta é a etapa prioritária para otimização do quiz.`;
+        document.getElementById('drop-alert-rate').innerText = data.biggest_drop_step.drop_rate;
+      } else {
+        alertBox.classList.add('hidden');
+      }
+
+      // Funil Visual
+      const barsContainer = document.getElementById('funnel-bars-container');
+      const maxStarted = data.total_started || 0;
+
+      if (!data.steps || data.total_started === 0) {
+        barsContainer.innerHTML = `
+          <div class="text-center py-8 px-4 text-slate-400 text-xs sm:text-sm bg-slate-900/50 border border-slate-800 rounded-2xl space-y-2">
+            <div class="text-3xl">📊</div>
+            <div class="font-bold text-white text-sm">Nenhum visitante registrado ainda</div>
+            <p class="max-w-md mx-auto text-slate-400">
+              O sistema de rastreamento está ativo e pronto. Quando visitantes reais acessarem o quiz ou avançarem entre as etapas, as métricas e taxas de avanço/queda aparecerão aqui em tempo real.
+            </p>
+            <div class="pt-2">
+              <a href="/" target="_blank" class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow">
+                Abrir Quiz para Gerar Métricas ↗
+              </a>
+            </div>
+          </div>
+        `;
+      } else {
+        barsContainer.innerHTML = data.steps.map(s => {
+          const percent = maxStarted > 0 ? ((s.reached_count / maxStarted) * 100).toFixed(0) : 0;
+          const isBiggestDrop = data.biggest_drop_step && data.biggest_drop_step.step_number === s.step_number && s.drop_off_count > 0;
+          const barColor = isBiggestDrop ? 'bg-red-500' : 'bg-emerald-500';
+
+          return `
+            <div class="space-y-1 p-2 rounded-xl ${isBiggestDrop ? 'bg-red-950/20 border border-red-500/30' : 'bg-slate-950/50'}">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold ${isBiggestDrop ? 'text-red-400' : 'text-slate-200'}">
+                  Etapa ${s.step_number} ${isBiggestDrop ? '← MAIOR QUEDA' : ''}
+                  <span class="text-slate-500 font-normal ml-1">(${s.step_name || ''})</span>
+                </span>
+                <span class="font-mono text-slate-300">
+                  <strong class="text-white">${s.reached_count}</strong> pessoas (${percent}%)
+                  ${s.drop_off_count > 0 ? `<span class="text-red-400 font-bold ml-1.5">-${s.drop_off_count} (${s.drop_off_rate})</span>` : ''}
+                </span>
+              </div>
+              <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                <div class="step-bar h-full rounded-full ${barColor}" style="width: ${percent}%;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Tabela Detalhada
+      const tableBody = document.getElementById('funnel-table-body');
+      if (data.steps && data.steps.length > 0) {
+        tableBody.innerHTML = data.steps.map(s => {
+          const isBiggestDrop = data.biggest_drop_step && data.biggest_drop_step.step_number === s.step_number && s.drop_off_count > 0;
+          return `
+            <tr class="hover:bg-slate-800/40 transition-colors ${isBiggestDrop ? 'bg-red-950/20' : ''}">
+              <td class="py-2.5 px-3 font-bold ${isBiggestDrop ? 'text-red-400' : 'text-white'}">
+                Etapa ${s.step_number}
+              </td>
+              <td class="py-2.5 px-3 text-slate-300 max-w-xs truncate" title="${s.step_name || ''}">
+                ${s.step_name || '-'}
+              </td>
+              <td class="py-2.5 px-3 text-right font-mono text-slate-200">${s.reached_count}</td>
+              <td class="py-2.5 px-3 text-right font-mono text-emerald-400 font-bold">${s.completed_count}</td>
+              <td class="py-2.5 px-3 text-right font-mono ${s.abandoned_count > 0 ? 'text-red-400 font-bold' : 'text-slate-500'}">
+                ${s.abandoned_count}
+              </td>
+              <td class="py-2.5 px-3 text-right font-mono ${isBiggestDrop ? 'text-red-400 font-black' : 'text-slate-400'}">
+                ${s.drop_off_rate} ${isBiggestDrop ? '⚠️' : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Stream de Eventos
+      const streamList = document.getElementById('events-stream-list');
+      const testCount = (data.test_summary && data.test_summary.total_test_events) ? data.test_summary.total_test_events : 0;
+      document.getElementById('events-count-badge').innerHTML = `${events.length} eventos ${testCount > 0 ? `<span class="text-purple-400 font-normal ml-1">(${testCount} de teste isolados)</span>` : ''}`;
+
+      if (events && events.length > 0) {
+        const recent = events.slice(-30).reverse();
+        streamList.innerHTML = recent.map(ev => {
+          const time = ev.timestamp ? ev.timestamp.slice(11, 19) : '--:--:--';
+          const isTest = ev.is_test || (ev.session_id && ev.session_id.startsWith('test_'));
+          let badgeColor = 'text-slate-400';
+          if (isTest) badgeColor = 'text-purple-400 font-bold';
+          else if (ev.event_name === 'quiz_started') badgeColor = 'text-amber-400';
+          else if (ev.event_name === 'quiz_step_completed') badgeColor = 'text-emerald-400';
+          else if (ev.event_name === 'quiz_abandoned') badgeColor = 'text-red-400 font-bold';
+          else if (ev.event_name === 'quiz_completed') badgeColor = 'text-cyan-400 font-bold';
+          else if (ev.event_name === 'quiz_checkout_clicked') badgeColor = 'text-amber-500 font-black';
+
+          return `
+            <div class="flex items-center justify-between border-b border-slate-900 pb-1 pt-0.5">
+              <span>[${time}] ${isTest ? '<span class="text-[10px] bg-purple-950 border border-purple-500/50 text-purple-300 px-1 py-0.2 rounded font-bold mr-1">TESTE</span>' : ''}<strong class="${badgeColor}">${ev.event_name}</strong>: ${ev.step_number ? 'Etapa ' + ev.step_number : (ev.last_step ? 'Última Etapa: ' + ev.last_step : '')}</span>
+              <span class="text-slate-600 text-[10px]">${ev.device_type || 'web'} • ${ev.session_id ? ev.session_id.slice(-8) : ''}</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Auto-carregamento inicial e atualização a cada 5 segundos
+    loadFunnelData();
+    setInterval(loadFunnelData, 5000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "quiz-calorias-app",
+  "version": "1.0.0",
+  "description": "Quiz de alta conversão para App de Calorias, Acompanhamento de Refeições e Hábitos Alimentares",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo Build ready"
+  },
+  "keywords": [
+    "quiz",
+    "calorias",
+    "alimentacao",
+    "nutricao",
+    "emagrecimento",
+    "app-calorias"
+  ],
+  "author": "CaloriasFit Team",
+  "license": "ISC",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.4"
+  }
+}

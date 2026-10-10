@@ -1,0 +1,6 @@
+/analytics             /analytics.html                 200
+/api/track             /.netlify/functions/track       200
+/api/funnel            /.netlify/functions/funnel      200
+/api/analytics/export  /.netlify/functions/export      200
+/api/analytics         /.netlify/functions/analytics   200
+/api/*                 /.netlify/functions/api/:splat  200

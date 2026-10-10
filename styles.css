@@ -1,0 +1,496 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #059669;
+  --primary-hover: #047857;
+  --primary-light: #ecfdf5;
+  --primary-tint: #f0fdf4;
+  --primary-border: #a7f3d0;
+  --slate-900: #0f172a;
+  --slate-800: #1e293b;
+  --slate-700: #334155;
+  --slate-600: #475569;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f1f5f9;
+  --slate-50: #f8fafc;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8fafc;
+  background-image: radial-gradient(at 50% 0%, #f0fdf4 0%, #f8fafc 55%, #f8fafc 100%);
+  color: #1e293b;
+  min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.025em;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+p, span, div, li, strong {
+  overflow-wrap: break-word;
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+/* Animations */
+@keyframes pulseSubtle {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px -1px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 10px 25px -1px rgba(16, 185, 129, 0.45);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2.2s infinite ease-in-out;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-effect::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
+  animation: shimmer 2.2s infinite;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-back {
+  animation: slideInLeft 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes floatGentle {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-float {
+  animation: floatGentle 3s ease-in-out infinite;
+}
+
+/* Interactive Card Clicks — SaaS Premium */
+.quiz-card {
+  position: relative;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  user-select: none;
+  min-height: 52px;
+  width: 100%;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+}
+
+.quiz-card:hover {
+  border-color: #059669;
+  background-color: #ffffff;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 14px -2px rgba(5, 150, 105, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.03);
+}
+
+.quiz-card:active {
+  transform: scale(0.99);
+}
+
+.quiz-card.selected {
+  border-color: #059669 !important;
+  background-color: #f0fdf4 !important;
+  box-shadow: 0 0 0 1px #059669, 0 4px 12px -2px rgba(5, 150, 105, 0.12) !important;
+}
+
+.quiz-card.selected .check-indicator,
+.quiz-card.selected .check-icon {
+  border-color: #059669 !important;
+  background-color: #059669 !important;
+  color: #ffffff !important;
+}
+
+.quiz-card.selected .icon-container {
+  background-color: #d1fae5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+/* Indicador de Check / Radio */
+.check-indicator,
+.check-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  border: 1.5px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  color: transparent;
+  background-color: #ffffff;
+}
+
+.check-indicator.square,
+.multi-option .check-icon {
+  border-radius: 6px;
+}
+
+/* Container de Ícones Vetoriais */
+.icon-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #475569;
+  transition: all 0.18s ease;
+}
+
+/* Ripple sutil */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(5, 150, 105, 0.15);
+  transform: scale(0);
+  animation: rippleAnimation 0.45s ease-out;
+  pointer-events: none;
+}
+
+@keyframes rippleAnimation {
+  to {
+    transform: scale(3.5);
+    opacity: 0;
+  }
+}
+
+/* Progress bar animada */
+.progress-stripes {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.2) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1.25rem 1.25rem;
+  animation: progressAnimation 1.5s linear infinite;
+}
+
+@keyframes progressAnimation {
+  0% { background-position: 1.25rem 0; }
+  100% { background-position: 0 0; }
+}
+
+/* Phone Mockup Realista (Hero) */
+.phone-chassis {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  border-radius: 36px;
+  background: #0f172a;
+  padding: 8px;
+  box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.phone-screen {
+  border-radius: 28px;
+  background: #ffffff;
+  overflow: hidden;
+  border: 1px solid #1e293b;
+}
+
+/* Video Frame 16:9 Profissional */
+.video-mockup {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.25);
+  background: #0b1120;
+  border: 1px solid #334155;
+}
+
+/* Botão de Navegação Amarelo Vibrante (SaaS Premium / Amarelo Vivo de Embalagem) */
+.btn-nav-yellow {
+  background: linear-gradient(180deg, #ffd400 0%, #ffb800 100%) !important;
+  color: #1e1004 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 800 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 14px -1px rgba(255, 184, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid #e5a500 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  user-select: none !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  min-height: 52px !important;
+  padding: 14px 24px !important;
+  font-size: 16px !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.btn-nav-yellow:hover {
+  background: linear-gradient(180deg, #ffe033 0%, #ffae00 100%) !important;
+  color: #1a0c00 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 8px 24px -2px rgba(255, 184, 0, 0.6), 0 4px 8px -1px rgba(0, 0, 0, 0.08) !important;
+}
+
+.btn-nav-yellow:active {
+  transform: translateY(0) scale(0.99) !important;
+  box-shadow: 0 2px 8px -1px rgba(255, 184, 0, 0.4) !important;
+}
+
+.btn-nav-yellow:disabled,
+.btn-nav-yellow.disabled {
+  background: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  opacity: 0.7 !important;
+}
+
+/* Hero CTA Button & Radios */
+#btn-hero-continue {
+  background: linear-gradient(180deg, #ffd400 0%, #ffb800 100%) !important;
+  color: #1e1004 !important;
+  border: 1px solid #e5a500 !important;
+  box-shadow: 0 4px 16px -1px rgba(255, 184, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  min-height: 52px !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+#btn-hero-continue:hover {
+  background: linear-gradient(180deg, #ffe033 0%, #ffae00 100%) !important;
+  color: #1a0c00 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 8px 24px -2px rgba(255, 184, 0, 0.6) !important;
+}
+
+#btn-hero-continue:active {
+  transform: translateY(0) scale(0.99) !important;
+}
+
+.radio-indicator {
+  transition: all 0.2s ease;
+}
+
+.quiz-card:hover .radio-indicator {
+  border-color: #0d8a6e;
+}
+
+/* Cores de destaque forte, quente e vibrante (vermelho/laranja intenso) para o Hero */
+.text-hero-accent {
+  color: #e63920 !important;
+}
+
+.bg-hero-accent {
+  background-color: #e63920 !important;
+}
+
+.bg-hero-accent-soft {
+  background-color: #fff1ee !important;
+}
+
+/* Player de Vídeo VSL Responsivo Vertical 9:16 (Sem Cortes / Sem Zoom) */
+#video-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  aspect-ratio: 9 / 16;
+  max-height: 520px;
+  background-color: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#video-wrapper video,
+#vsl-video-player,
+#vsl-video-frame {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  border: 0 !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  border-radius: 14px;
+}
+
+/* Título e Destaques da Última Etapa (VSL & CALORI AI) */
+.vsl-header-title {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: clamp(1.2rem, 5.2vw, 1.85rem);
+  font-weight: 900;
+  color: #090d16;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
+  margin: 0 auto;
+}
+
+.vsl-calori-highlight {
+  color: #e63920;
+  font-weight: 950;
+  display: inline-block;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 2px rgba(230, 57, 32, 0.18);
+}
+
+.badge-gold {
+  background-color: rgba(251, 191, 36, 0.15) !important;
+  color: #f59e0b !important;
+  border: 1px solid rgba(251, 191, 36, 0.5) !important;
+}
+
+.badge-green-vivid {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  color: #34d399 !important;
+  border: 1.5px solid rgba(52, 211, 153, 0.7) !important;
+  box-shadow: 0 2px 8px -1px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Otimizações Mobile First (< 640px) */
+@media (max-width: 639px) {
+  #main-layout {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 14px !important;
+  }
+
+  h1 {
+    font-size: clamp(1.35rem, 5.8vw, 1.85rem) !important;
+    line-height: 1.24 !important;
+  }
+
+  .vsl-header-title {
+    font-size: clamp(1.15rem, 5.4vw, 1.55rem) !important;
+    line-height: 1.24 !important;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  h2 {
+    font-size: clamp(1.15rem, 5vw, 1.45rem) !important;
+    line-height: 1.28 !important;
+  }
+
+  .quiz-card {
+    padding: 12px 14px !important;
+    gap: 12px !important;
+  }
+
+  .btn-nav-yellow {
+    font-size: 15.5px !important;
+    padding: 14px 18px !important;
+    width: 100% !important;
+  }
+
+  #video-wrapper {
+    max-width: 100% !important;
+    max-height: 480px !important;
+  }
+
+  .phone-chassis {
+    max-width: 100% !important;
+    border-radius: 24px !important;
+    padding: 6px !important;
+  }
+}
+
